@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mindease - Your AI Mental Health Companion</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#6B46C1', // A soothing purple for headers and main buttons
+                        secondary: '#8A6FCB', // Slightly lighter purple, for user messages
+                        accent: '#FFC857', // A warm yellow for glowing accents/action buttons
+                        bodyBg: '#000000', // Solid black background for the entire body
+                        containerBg: '#1A1A2E', // Very dark blue/purple for the chat container
+                        textLight: '#FFFFFF', // White text for most elements on dark backgrounds
+                        textSubtle: '#E0E0E0', // Light grey for subtle text on dark backgrounds
+                        messageBotBg: '#282A36', // Dark grey/blue for bot message background
+                        messageUserBg: '#44475A', // Slightly lighter dark grey for user message background
+                        inputBg: '#3B3D4B', // Dark grey for input field background
+                        placeholderText: '#B0B0B0', // Light grey for placeholder text
+                        footerText: '#B0B0B0', // Light grey for footer text
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: theme('colors.bodyBg'); /* Solid black background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-attachment: fixed;
+            color: theme('colors.textLight'); /* Default text color (white) for the body background */
+        }
+
+        .chat-container {
+            background-color: theme('colors.containerBg'); /* Very dark blue/purple for container */
+            border-radius: 1.5rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6); /* Deeper shadow for contrast on black body */
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 75vh;
+            max-height: 90vh;
+            transition: all 0.3s ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle light border */
+        }
+
+        .chat-header {
+            background-color: theme('colors.primary');
+            color: theme('colors.textLight'); /* White text on primary background */
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 1.85rem;
+            font-weight: 700;
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+            background-color: theme('colors.containerBg'); /* Ensure messages area is dark */
+            color: theme('colors.textLight'); /* Default text color for messages area (white) */
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 0.9rem 1.3rem;
+            border-radius: 1.25rem;
+            word-wrap: break-word;
+            line-height: 1.6;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2); /* Darker message shadows */
+        }
+
+        .message.user {
+            background-color: theme('colors.messageUserBg');
+            color: theme('colors.textLight'); /* White text on user bubble */
+            align-self: flex-end;
+            border-bottom-right-radius: 0.5rem;
+        }
+
+        .message.bot {
+            background-color: theme('colors.messageBotBg');
+            color: theme('colors.textLight'); /* White text on bot bubble */
+            align-self: flex-start;
+            border-bottom-left-radius: 0.5rem;
+        }
+
+        /* Markdown specific styling */
+        .message.bot strong, .message.bot b {
+            color: theme('colors.accent'); /* Make bold text pop */
+        }
+
+        .message.bot em, .message.bot i {
+            font-style: italic;
+            color: theme('colors.textSubtle'); /* Subtle italics */
+        }
+
+        .message.bot ul, .message.bot ol {
+            list-style-position: inside;
+            padding-left: 1.2em; /* Indent lists */
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+        }
+        
+        .message.bot li {
+            margin-bottom: 0.25em;
+        }
+
+        .message.bot pre {
+            background-color: #000; /* Black background for code blocks */
+            color: #0F0; /* Green text for code */
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-top: 0.75rem;
+            overflow-x: auto; /* Enable horizontal scrolling for long lines */
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; /* Monospaced font for code */
+        }
+
+        .message.bot code {
+            background-color: #333; /* Darker background for inline code */
+            color: theme('colors.accent'); /* Accent color for inline code */
+            padding: 0.2em 0.4em;
+            border-radius: 0.2em;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+
+        .chat-input-area {
+            display: flex;
+            padding: 1.5rem;
+            gap: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for dark theme */
+            background-color: theme('colors.containerBg'); /* Match container background */
+            align-items: center;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 0.75rem 1.25rem;
+            border: 2px solid theme('colors.secondary');
+            background-color: theme('colors.inputBg'); /* Dark input background */
+            color: theme('colors.textLight'); /* Light text for input */
+            border-radius: 9999px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+        .chat-input::placeholder {
+            color: theme('colors.placeholderText'); /* Medium grey placeholder text */
+        }
+
+        .chat-input:focus {
+            border-color: theme('colors.accent'); /* Focus with accent color */
+            box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.25); /* Glow with accent */
+        }
+
+        .chat-button, .upload-button, .suggest-button, .journal-button, .affirmation-button {
+            background-color: theme('colors.primary');
+            color: theme('colors.textLight'); /* White text for these buttons */
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-button:hover, .upload-button:hover, .suggest-button:hover, .journal-button:hover, .affirmation-button:hover {
+            background-color: #5A3AAB; /* Slightly darker primary on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-button:active, .upload-button:active, .suggest-button:active, .journal-button:active, .affirmation-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .suggest-button-container {
+            padding: 1.5rem;
+            background-color: theme('colors.containerBg'); /* Match container background */
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .suggest-button, .journal-button, .affirmation-button {
+            background-color: theme('colors.accent');
+            color: theme('colors.textDark'); /* Dark text on accent buttons */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .suggest-button:hover, .journal-button:hover, .affirmation-button:hover {
+            background-color: #077dc1; /* Slightly darker accent on hover */
+        }
+
+        .image-preview-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            background-color: theme('colors.containerBg'); /* Match container background */
+            display: none;
+        }
+
+        .image-preview-area.active {
+            display: flex;
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            object-fit: contain;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15); /* Subtle border for image */
+        }
+
+        .analyze-image-button {
+            background-color: theme('colors.primary');
+            color: theme('colors.textLight'); /* White text */
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .analyze-image-button:hover {
+            background-color: #5A3AAB;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .analyze-image-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Loading Indicator */
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            color: theme('colors.footerText'); /* Light grey for loading text */
+            padding: 1rem;
+            font-style: italic;
+            background-color: theme('colors.containerBg'); /* Match container background */
+        }
+
+        .loading-indicator.active {
+            display: block;
+        }
+
+        .dot-pulse {
+            position: relative;
+            left: -9999px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: theme('colors.accent'); /* Use accent for loading dots */
+            color: theme('colors.accent');
+            box-shadow: 9999px 0 0 -5px;
+            animation: dotPulse 1.5s infinite linear;
+            animation-delay: .25s;
+        }
+
+        .dot-pulse::before, .dot-pulse::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: theme('colors.accent');
+            color: theme('colors.accent');
+        }
+
+        .dot-pulse::before {
+            box-shadow: 9984px 0 0 -5px;
+            animation: dotPulseBef 1.5s infinite linear;
+            animation-delay: 0s;
+        }
+
+        @keyframes dotPulseBef {
+            0% {
+                box-shadow: 9984px 0 0 -5px;
+            }
+            30% {
+                box-shadow: 9984px 0 0 2px;
+            }
+            60%, 100% {
+                box-shadow: 9984px 0 0 -5px;
+            }
+        }
+
+        @keyframes dotPulse {
+            0% {
+                box-shadow: 9999px 0 0 -5px;
+            }
+            30% {
+                box-shadow: 9999px 0 0 2px;
+            }
+            60%, 100% {
+                box-shadow: 9999px 0 0 -5px;
+            }
+        }
+
+        @keyframes dotPulseAft {
+            0% {
+                box-shadow: 10014px 0 0 -5px;
+            }
+            30% {
+                box-shadow: 10014px 0 0 2px;
+            }
+            60%, 100% {
+                box-shadow: 10014px 0 0 -5px;
+            }
+        }
+
+        .app-footer {
+            background-color: theme('colors.containerBg'); /* Match container background for footer */
+            color: theme('colors.footerText'); /* Light grey text */
+            text-align: center;
+            padding: 0.75rem;
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 1.5rem;
+        }
+    </style>
+</head>
+<body style="background-color: #333;"> 
+    <div style="background: #212223;  color: white;" class="chat-container">
+        <div class="chat-header">
+            Mindease
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Initial bot message -->
+            <div class="message bot">
+                Hello! I'm Mindease, your AI companion. How are you feeling today? You can tell me anything, and I'll do my best to help you.
+            </div>
+        </div>
+        <div id="loadingIndicator" class="loading-indicator">
+            <div class="dot-pulse"></div>
+            Mindease is thinking...
+        </div>
+
+        <!-- Image Preview Area -->
+        <div id="imagePreviewArea" class="image-preview-area">
+            <img id="imagePreview" src="#" alt="Image Preview">
+            <button id="analyzeImageButton" class="analyze-image-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><path d="M9 8h.01"/></svg>
+                Analyze Image
+            </button>
+        </div>
+
+        <div class="chat-input-area">
+            <input style="background-color: #333; " type="text" id="chatInput" class="chat-input" placeholder="Type your message...">
+            <input type="file" id="imageUploadInput" accept="image/*" class="hidden">
+            <button id="uploadImageButton" class="upload-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image-plus"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><path d="M9 8h.01"/></svg>
+                Upload
+            </button>
+            <button  id="sendButton" class="chat-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucude-send-horizontal"><path d="m3 3 3 9-3 9 19-9Z"/><path d="M6 12h16"/></svg>
+                Send
+            </button>
+        </div>
+        <div class="suggest-button-container">
+            <button id="suggestButton" class="suggest-button">
+                <span class="text-xl">✨</span> Get Relief Suggestions
+            </button>
+            <button id="journalButton" class="journal-button">
+                <span class="text-xl">✨</span> Journal Prompt
+            </button>
+            <button id="affirmationButton" class="affirmation-button">
+                <span class="text-xl">✨</span> Daily Affirmation
+            </button>
+        </div>
+        <div class="app-footer">
+            &copy; Made by Joydeep Bhattacharya
+        </div>
+    </div>
+
+    <script type="module">
+        // Global variables for Firebase configuration, if needed (not directly used in this version but good practice)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const suggestButton = document.getElementById('suggestButton');
+        const journalButton = document.getElementById('journalButton');
+        const affirmationButton = document.getElementById('affirmationButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const imageUploadInput = document.getElementById('imageUploadInput');
+        const uploadImageButton = document.getElementById('uploadImageButton');
+        const imagePreviewArea = document.getElementById('imagePreviewArea');
+        const imagePreview = document.getElementById('imagePreview');
+        const analyzeImageButton = document.getElementById('analyzeImageButton');
+
+        let chatHistory = []; 
+        let currentImageBase64 = null;
+        let currentImageMimeType = null;
+
+        // Function to scroll chat to the bottom
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Basic Markdown to HTML converter
+        function convertMarkdownToHtml(markdown) {
+            let html = markdown;
+
+            // Convert bold: **text** or __text__
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+            // Convert italics: *text* or _text_
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+            // Convert code blocks: ```code```
+            html = html.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+
+            // Convert inline code: `code`
+            html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+
+            // Convert ordered lists: 1. item
+            html = html.replace(/^(\d+\.\s.*(\n\d+\.\s.*)*)/gm, (match) => {
+                const items = match.split('\n').map(line => `<li>${line.replace(/^\d+\.\s/, '')}</li>`).join('');
+                return `<ol>${items}</ol>`;
+            });
+
+            // Convert unordered lists: * item or - item
+            html = html.replace(/^(\*\s.*(\n\*\s.*)*)/gm, (match) => {
+                const items = match.split('\n').map(line => `<li>${line.replace(/^\*\s/, '')}</li>`).join('');
+                return `<ul>${items}</ul>`;
+            });
+            // Fix: Removed the extra closing parenthesis from the regex pattern
+            html = html.replace(/^(- |• )(.*(\n(- |• ).*)*)/gm, (match) => { 
+                const items = match.split('\n').map(line => `<li>${line.replace(/^(- |• )/, '')}</li>`).join('');
+                return `<ul>${items}</ul>`;
+            });
+
+
+            // Convert newlines to <br> for regular text, but not inside pre/code blocks or list items already handled
+            // This is trickier with more complex markdown, so applying it before markdown, then adjusting order
+            // Re-applying newline after markdown for general text that wasn't part of other blocks
+            html = html.replace(/\n(?!<ul|<ol|<pre>)/g, '<br>');
+
+
+            return html;
+        }
+
+
+        // Function to display a message
+        function displayMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            
+            if (sender === 'bot') {
+                messageDiv.innerHTML = convertMarkdownToHtml(message);
+            } else {
+                messageDiv.textContent = message; // User messages don't need markdown parsing
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Function to show/hide loading indicator
+        function showLoading(show) {
+            if (show) {
+                loadingIndicator.classList.add('active');
+                sendButton.disabled = true;
+                suggestButton.disabled = true;
+                journalButton.disabled = true;
+                affirmationButton.disabled = true;
+                uploadImageButton.disabled = true;
+                analyzeImageButton.disabled = true;
+                chatInput.disabled = true;
+            } else {
+                loadingIndicator.classList.remove('active');
+                sendButton.disabled = false;
+                suggestButton.disabled = false;
+                journalButton.disabled = false;
+                affirmationButton.disabled = false;
+                uploadImageButton.disabled = false;
+                analyzeImageButton.disabled = false;
+                chatInput.disabled = false;
+            }
+            scrollToBottom();
+        }
+
+        // Function to convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Function to get response from Gemini API
+        async function getBotResponse(userMessage, purpose = 'chat', imageData = null) {
+            showLoading(true);
+
+            let parts = [];
+            if (userMessage) {
+                parts.push({ text: userMessage });
+            }
+            if (imageData && imageData.data && imageData.mimeType) {
+                parts.push({ inlineData: { mimeType: imageData.mimeType, data: imageData.data } });
+            }
+
+            let currentContents;
+            if (['image_analysis', 'suggestions', 'journal_prompt', 'affirmation'].includes(purpose)) {
+                currentContents = [{ role: "user", parts: parts }];
+            } else {
+                chatHistory.push({ role: "user", parts: parts });
+                currentContents = chatHistory;
+            }
+
+            const payload = { contents: currentContents };
+            const apiKey = "You_API_Key_here";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const botResponseText = result.candidates[0].content.parts[0].text;
+                    displayMessage(botResponseText, 'bot');
+                    if (purpose === 'chat') {
+                        chatHistory.push({ role: "model", parts: [{ text: botResponseText }] });
+                    }
+                } else {
+                    displayMessage("Mindease couldn't generate a response. Please try again.", 'bot');
+                }
+            } catch (error) {
+                console.error('Error fetching from Gemini API:', error);
+                displayMessage("Oops! Mindease is having trouble connecting or processing your request. Please try again later.", 'bot');
+            } finally {
+                showLoading(false);
+                currentImageBase64 = null;
+                currentImageMimeType = null;
+                imagePreview.src = '#';
+                imagePreviewArea.classList.remove('active');
+            }
+        }
+
+        // Handle sending messages
+        async function handleSendMessage() {
+            const userMessage = chatInput.value.trim();
+            if (userMessage) {
+                displayMessage(userMessage, 'user');
+                chatInput.value = '';
+                await getBotResponse(userMessage, 'chat');
+            }
+        }
+
+        // Handle getting suggestions
+        async function handleGetSuggestions() {
+            displayMessage("Thinking about ways to feel better...", 'user');
+            await getBotResponse("Provide 3-5 actionable, simple, and helpful suggestions for mental well-being, focusing on things like mindfulness, small activities, or connecting with others. Format them as a bulleted list.", 'suggestions');
+        }
+
+        // Handle getting a journal prompt
+        async function handleGetJournalPrompt() {
+            displayMessage("Generating a journaling prompt for you...", 'user');
+            await getBotResponse("Generate a thoughtful and empathetic journal prompt to encourage self-reflection about emotions or daily experiences.", 'journal_prompt');
+        }
+
+        // Handle getting an affirmation
+        async function handleGetAffirmation() {
+            displayMessage("Generating a positive affirmation for you...", 'user');
+            await getBotResponse("Generate a short, positive, and encouraging affirmation.", 'affirmation');
+        }
+
+        // Handle image file selection
+        uploadImageButton.addEventListener('click', () => {
+            imageUploadInput.click();
+        });
+
+        imageUploadInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                displayMessage(`Uploading image: ${file.name}...`, 'user');
+                imagePreview.src = URL.createObjectURL(file);
+                imagePreviewArea.classList.add('active');
+
+                currentImageMimeType = file.type;
+                const base64Data = await fileToBase64(file);
+                currentImageBase64 = base64Data.split(',')[1];
+            } else {
+                imagePreview.src = '#';
+                imagePreviewArea.classList.remove('active');
+                currentImageBase64 = null;
+                currentImageMimeType = null;
+            }
+        });
+
+        // Handle analyzing the uploaded image
+        analyzeImageButton.addEventListener('click', async () => {
+            if (currentImageBase64 && currentImageMimeType) {
+                displayMessage("Mindease, please analyze this image and describe what you see, and if relevant, how it relates to well-being or mood.", 'user');
+                await getBotResponse(
+                    "Analyze this image and describe what you see, and if relevant, how it relates to well-being or mood. Focus on positive or neutral interpretations.",
+                    'image_analysis',
+                    { data: currentImageBase64, mimeType: currentImageMimeType }
+                );
+            } else {
+                displayMessage("Please upload an image first to analyze.", 'user');
+            }
+        });
+
+        // Event Listeners for chat input and send
+        sendButton.addEventListener('click', handleSendMessage);
+        chatInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                handleSendMessage();
+            }
+        });
+        suggestButton.addEventListener('click', handleGetSuggestions);
+        journalButton.addEventListener('click', handleGetJournalPrompt);
+        affirmationButton.addEventListener('click', handleGetAffirmation);
+
+    </script>
+</body>
+</html>
